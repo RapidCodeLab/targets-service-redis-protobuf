@@ -22,6 +22,7 @@ type (
 		ServerListenAddr    string `env:"SERVER_LISTEN_ADDR,required"`
 		BaseURL             string `env:"BASE_URL,required"`
 		RedisConfig
+		KafkaConfig
 	}
 
 	RedisConfig struct {
@@ -30,6 +31,12 @@ type (
 		RedisDB       int    `env:"REDIS_DB,required"`
 	}
 
+	KafkaConfig struct {
+		KafkaAddrs    string `env:"KAFKA_ADDRS,required"`
+		KafkaUsername string `env:"KAFKA_USERNAME,required"`
+		KafkaPassword string `env:"KAFKA_PASSWORD,required"`
+		KafkaTopic    string `env:"KAFKA_TOPIC,required"`
+	}
 )
 
 func main() {
@@ -60,9 +67,26 @@ func main() {
 		cancel()
 	}()
 
-	cnsmr := consumer.New()
+	cnsmr, err := consumer.New(
+		config.KafkaAddrs,
+		config.KafkaUsername,
+		config.KafkaPassword,
+		config.KafkaTopic,
+	)
+	if err != nil {
+		slog.Error(
+			"Consumer Init Error",
+			"datetime", time.Now().Format(timeFormat),
+			"error", err.Error(),
+		)
+		os.Exit(1)
+	}
 
-	strg := storage.New()
+	strg := storage.New(
+		config.RedisAddr,
+		config.RedisPassword,
+		config.RedisDB,
+	)
 
 	s := targets_svc.New(strg, cnsmr)
 

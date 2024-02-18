@@ -16,7 +16,7 @@ type (
 	}
 
 	Consumer interface {
-		Read() (data []byte, err error)
+		Read(ctx context.Context) (data []byte, err error)
 	}
 
 	Service struct {
