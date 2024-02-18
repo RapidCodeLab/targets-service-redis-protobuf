@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "/targets";
+
+message Request {
+  string country_code = 1;
+}
+
+message Response {
+  repeated uint64 ids = 1; 
+}
+
+service Targets {
+  rpc Get(Request) returns (Response){}
+}
