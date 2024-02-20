@@ -2,11 +2,26 @@ package targets_svc
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 
 	"github.com/RapidCodeLab/experiments/targets-service-redis-protobuf/pkg/targets"
 	"github.com/valyala/fasthttp/reuseport"
 	"google.golang.org/grpc"
+)
+
+const (
+	FilterTypeAllowed    = "included"
+	FilterTypeDisallowed = "excluded"
+
+	FilterTargetCountry     = "country"
+	FilterTargetDevice      = "device"
+	FilterTargetPlatform    = "platform"
+	FilterTargetBrowser     = "browser"
+	FilterTargetPublisherID = "publisher_id"
+	FilterTargetSourceID    = "source_id"
+	FilterTargetEndpointID  = "endpoint_id"
+	FilterTargetAdType      = "ad_type"
 )
 
 type (
@@ -17,6 +32,19 @@ type (
 
 	Consumer interface {
 		Read(ctx context.Context) (data []byte, err error)
+		Stop() error
+	}
+
+	IncomingMsg struct {
+		IDx     uint64   `json:"idx"`
+		Status  string   `json:"status"`
+		Filters []Filter `json:"filters"`
+	}
+
+	Filter struct {
+		Type   string   `json:"filter_type"`
+		Target string   `json:"filter_target"`
+		Values []string `json:"filter_values"`
 	}
 
 	Service struct {
@@ -66,8 +94,32 @@ func (s *Service) Run(
 	targets.RegisterTargetsServer(srv, s)
 
 	go func() {
-		<-ctx.Done()
-		srv.GracefulStop()
+		for {
+			select {
+			case <-ctx.Done():
+				err := s.consumer.Stop()
+				if err != nil {
+					s.logger.Error("stop consumer", "error", err.Error())
+				}
+				srv.GracefulStop()
+			default:
+				msg, err := s.consumer.Read(ctx)
+				if err != nil {
+					s.logger.Error("read from kafka", "error", err.Error())
+					continue
+				}
+
+				var incomingMsg IncomingMsg
+				err = json.Unmarshal(msg, &incomingMsg)
+				if err != nil {
+					s.logger.Error("unmarshaling", "error", err.Error())
+					continue
+				}
+
+				s.logger.Info("recieved msg", "msg", incomingMsg)
+
+			}
+		}
 	}()
 
 	return srv.Serve(ln)

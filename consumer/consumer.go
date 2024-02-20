@@ -65,3 +65,7 @@ func (c *Consumer) Read(
 
 	return msg.Value, nil
 }
+
+func (c *Consumer) Stop() error {
+	return c.reader.Close()
+}

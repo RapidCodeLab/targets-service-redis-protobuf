@@ -20,7 +20,6 @@ type (
 	Config struct {
 		ServerListenNetwork string `env:"SERVER_LISTEN_NETWORK,required"`
 		ServerListenAddr    string `env:"SERVER_LISTEN_ADDR,required"`
-		BaseURL             string `env:"BASE_URL,required"`
 		RedisConfig
 		KafkaConfig
 	}
