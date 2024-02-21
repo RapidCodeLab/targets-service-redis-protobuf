@@ -4,14 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/RoaringBitmap/roaring/roaring64"
 )
 
 const (
-	addBit       = 1
-	removeBit    = 0
-	StatusBitmap = "bitmap.status"
+	addBit                    uint = 1
+	removeBit                 uint = 0
+	StatusBitmap                   = "bitmap:status"
+	FilterCountryBitmapPrefix      = "bitmap:country:"
 )
 
 func (s *Service) Proccess(
@@ -22,14 +24,74 @@ func (s *Service) Proccess(
 
 	switch msg.Status {
 	case StatusEnabled:
-		return s.UpdateBitmap(ctx, StatusBitmap, msg.IDx, addBit)
+		err := s.UpdateBitmap(ctx, StatusBitmap, msg.IDx, addBit)
+		if err != nil {
+			s.logger.Error("set status bitmap", "error", err.Error())
+			// collect error
+		}
 	case StatusDisabled:
-		return s.UpdateBitmap(ctx, StatusBitmap, msg.IDx, removeBit)
+		err := s.UpdateBitmap(ctx, StatusBitmap, msg.IDx, removeBit)
+		if err != nil {
+			s.logger.Error("set status bitmap", "error", err.Error())
+			// collect error
+		}
 	default:
 		s.logger.Warn("unrecognized operation", "value", msg.Status)
 	}
 
+	for _, filter := range msg.Filters {
+		slog.Info("filter to set", "data", filter)
+		switch filter.Target {
+		case FilterTargetCountry:
+			err := s.SetCountryBitmap(
+				ctx,
+				msg.IDx,
+				filter.Type,
+				filter.Values)
+			if err != nil {
+				s.logger.Error("set country bitmap", "error", err.Error())
+				// collect error
+			}
+		default:
+			slog.Warn("unrecognized filter target", "msg", filter.Target)
+			continue
+		}
+	}
+
 	return nil
+}
+
+func (s *Service) SetCountryBitmap(
+	ctx context.Context,
+	idx uint64,
+	filter_type string,
+	values []string,
+) error {
+	var err error
+
+	for _, cc := range CountryCodes {
+		bit := addBit
+
+		if contains(values, cc) && filter_type == FilterTypeDisallowed {
+			bit = removeBit
+		}
+
+		if cc == "CN" || cc == "IT" {
+			s.logger.Info("v and cc", "idx", idx, "key", FilterCountryBitmapPrefix+cc, "bit", bit)
+		}
+		err := s.UpdateBitmap(
+			ctx,
+			FilterCountryBitmapPrefix+cc,
+			idx,
+			bit,
+		)
+		if err != nil {
+			slog.Error("update bitmap", "error", err.Error())
+			// collect err
+		}
+	}
+
+	return err
 }
 
 func (s *Service) UpdateBitmap(
@@ -63,6 +125,7 @@ func (s *Service) UpdateBitmap(
 	case removeBit:
 		bitmap.Remove(idx)
 	case addBit:
+		s.logger.Info("add bit", "idx", idx, "key", key)
 		bitmap.Add(idx)
 	default:
 		s.logger.Warn("unrecognized operation", "value", value)
@@ -74,4 +137,13 @@ func (s *Service) UpdateBitmap(
 	}
 
 	return s.storage.Set(ctx, key, res)
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }

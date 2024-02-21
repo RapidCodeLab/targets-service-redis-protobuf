@@ -62,12 +62,17 @@ func (s *Service) Get(
 	ctx context.Context,
 	req *targets.Request,
 ) (*targets.Response, error) {
-	s.logger.Info("request handled",
-		"data",
-		req.GetCountryCode())
+	data, err := s.GetByTarget(
+		ctx,
+		req.GetCountryCode(),
+	)
+	if err != nil {
+		s.logger.Error("get by target", "error", err.Error())
+		return nil, err
+	}
 
 	return &targets.Response{
-		Ids: []uint64{1, 2, 3},
+		Ids: data,
 	}, nil
 }
 
