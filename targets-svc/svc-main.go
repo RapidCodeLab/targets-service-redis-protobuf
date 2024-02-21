@@ -11,6 +11,9 @@ import (
 )
 
 const (
+	StatusEnabled  = "enabled"
+	StatusDisabled = "disabled"
+
 	FilterTypeAllowed    = "included"
 	FilterTypeDisallowed = "excluded"
 
@@ -116,7 +119,11 @@ func (s *Service) Run(
 					continue
 				}
 
-				s.logger.Info("recieved msg", "msg", incomingMsg)
+				err = s.Proccess(ctx, incomingMsg)
+				if err != nil {
+					s.logger.Error("processing msg", "error", err.Error())
+					continue
+				}
 
 			}
 		}

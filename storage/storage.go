@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -11,12 +12,19 @@ type Storage struct {
 }
 
 func New(addr, password string, db int) *Storage {
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: password,
+		DB:       db,
+	})
+
+	err := redisClient.Ping(context.Background()).Err()
+	if err != nil {
+		slog.Error("redis ping", "error", err.Error())
+	}
+
 	return &Storage{
-		rdb: redis.NewClient(&redis.Options{
-			Addr:     addr,
-			Password: password,
-			DB:       db,
-		}),
+		rdb: redisClient,
 	}
 }
 
