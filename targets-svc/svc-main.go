@@ -38,18 +38,6 @@ type (
 		Stop() error
 	}
 
-	IncomingMsg struct {
-		IDx     uint64   `json:"idx"`
-		Status  string   `json:"status"`
-		Filters []Filter `json:"filters"`
-	}
-
-	Filter struct {
-		Type   string   `json:"filter_type"`
-		Target string   `json:"filter_target"`
-		Values []string `json:"filter_values"`
-	}
-
 	Service struct {
 		targets.UnimplementedTargetsServer
 		storage  Storage
@@ -61,19 +49,21 @@ type (
 func (s *Service) Get(
 	ctx context.Context,
 	req *targets.Request,
-) (*targets.Response, error) {
+) *targets.Response {
+	res := &targets.Response{}
+
 	data, err := s.GetByTarget(
 		ctx,
 		req.GetCountryCode(),
 	)
 	if err != nil {
 		s.logger.Error("get by target", "error", err.Error())
-		return nil, err
+		return res
 	}
 
-	return &targets.Response{
-		Ids: data,
-	}, nil
+	res.Ids = data
+
+	return res
 }
 
 func New(

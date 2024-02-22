@@ -1,5 +1,19 @@
 package targets_svc
 
+type (
+	IncomingMsg struct {
+		IDx     uint64   `json:"idx"`
+		Status  string   `json:"status"`
+		Filters []Filter `json:"filters"`
+	}
+
+	Filter struct {
+		Type   string   `json:"filter_type"`
+		Target string   `json:"filter_target"`
+		Values []string `json:"filter_values"`
+	}
+)
+
 var CountryCodes = []string{
 	"AF", "AX", "AL", "DZ", "AS", "AD", "AO", "AI", "AQ", "AG", "AR", "AM", "AW", "AU", "AT", "AZ",
 	"BS", "BH", "BD", "BB", "BY", "BE", "BZ", "BJ", "BM", "BT", "BO", "BA", "BW", "BV", "BR", "IO",

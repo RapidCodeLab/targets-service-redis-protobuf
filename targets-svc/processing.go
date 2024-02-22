@@ -10,10 +10,13 @@ import (
 )
 
 const (
-	addBit                    uint = 1
-	removeBit                 uint = 0
-	StatusBitmap                   = "bitmap:status"
-	FilterCountryBitmapPrefix      = "bitmap:country:"
+	addBit                     uint = 1
+	removeBit                  uint = 0
+	StatusBitmap                    = "bitmap:status"
+	FilterCountryBitmapPrefix       = "bitmap:country:"
+	FilterBrowserBitmapPrefix       = "bitmap:browser:"
+	FilterPlatformBitmapPrefix      = "bitmap:platform:"
+	FilterDeviceBitmapPrefix        = "bitmap:device:"
 )
 
 func (s *Service) Proccess(
@@ -23,7 +26,11 @@ func (s *Service) Proccess(
 	s.logger.Info("recieved msg", "msg", msg)
 
 	filerExists := make(map[string]bool)
+
 	filerExists[FilterTargetCountry] = false
+	filerExists[FilterTargetBrowser] = false
+	filerExists[FilterTargetPlatform] = false
+	filerExists[FilterTargetDevice] = false
 
 	switch msg.Status {
 	case StatusEnabled:
@@ -47,31 +54,113 @@ func (s *Service) Proccess(
 		slog.Info("filter to set", "data", filter)
 		switch filter.Target {
 		case FilterTargetCountry:
-			err := s.SetCountryBitmap(
+			err := s.SetBitmap(
 				ctx,
 				msg.IDx,
+				FilterCountryBitmapPrefix,
 				filter.Type,
+				CountryCodes,
 				filter.Values)
 			if err != nil {
 				s.logger.Error("set country bitmap", "error", err.Error())
 				// collect error
 			}
 			filerExists[FilterTargetCountry] = true
+		case FilterTargetBrowser:
+			err := s.SetBitmap(
+				ctx,
+				msg.IDx,
+				FilterBrowserBitmapPrefix,
+				filter.Type,
+				Browsers,
+				filter.Values)
+			if err != nil {
+				s.logger.Error("set browser bitmap", "error", err.Error())
+				// collect error
+			}
+			filerExists[FilterTargetBrowser] = true
+		case FilterTargetPlatform:
+			err := s.SetBitmap(
+				ctx,
+				msg.IDx,
+				FilterPlatformBitmapPrefix,
+				filter.Type,
+				Platforms,
+				filter.Values)
+			if err != nil {
+				s.logger.Error("set platform bitmap", "error", err.Error())
+				// collect error
+			}
+			filerExists[FilterTargetPlatform] = true
+		case FilterTargetDevice:
+			err := s.SetBitmap(
+				ctx,
+				msg.IDx,
+				FilterDeviceBitmapPrefix,
+				filter.Type,
+				Devices,
+				filter.Values)
+			if err != nil {
+				s.logger.Error("set device bitmap", "error", err.Error())
+				// collect error
+			}
+			filerExists[FilterTargetDevice] = true
 		default:
 			slog.Warn("unrecognized filter target", "msg", filter.Target)
 			continue
 		}
 	}
 
-	// set if filter not exists
+	// set if filters not exists
 	if !filerExists[FilterTargetCountry] {
-		err := s.SetCountryBitmap(
+		err := s.SetBitmap(
 			ctx,
 			msg.IDx,
+			FilterCountryBitmapPrefix,
 			"none",
+			CountryCodes,
 			[]string{})
 		if err != nil {
 			s.logger.Error("set country bitmap", "error", err.Error())
+			// collect error
+		}
+	}
+	if !filerExists[FilterTargetBrowser] {
+		err := s.SetBitmap(
+			ctx,
+			msg.IDx,
+			FilterBrowserBitmapPrefix,
+			"none",
+			Browsers,
+			[]string{})
+		if err != nil {
+			s.logger.Error("set browser bitmap", "error", err.Error())
+			// collect error
+		}
+	}
+	if !filerExists[FilterTargetPlatform] {
+		err := s.SetBitmap(
+			ctx,
+			msg.IDx,
+			FilterPlatformBitmapPrefix,
+			"none",
+			Platforms,
+			[]string{})
+		if err != nil {
+			s.logger.Error("set platform bitmap", "error", err.Error())
+			// collect error
+		}
+	}
+	if !filerExists[FilterTargetDevice] {
+		err := s.SetBitmap(
+			ctx,
+			msg.IDx,
+			FilterDeviceBitmapPrefix,
+			"none",
+			Devices,
+			[]string{})
+		if err != nil {
+			s.logger.Error("set device bitmap", "error", err.Error())
 			// collect error
 		}
 	}
@@ -79,15 +168,17 @@ func (s *Service) Proccess(
 	return nil
 }
 
-func (s *Service) SetCountryBitmap(
+func (s *Service) SetBitmap(
 	ctx context.Context,
 	idx uint64,
+	prefix,
 	filter_type string,
+	list,
 	values []string,
 ) error {
 	var err error
 
-	for _, cc := range CountryCodes {
+	for _, cc := range list {
 		bit := addBit
 
 		if contains(values, cc) && filter_type == FilterTypeDisallowed {
@@ -96,7 +187,7 @@ func (s *Service) SetCountryBitmap(
 
 		err := s.UpdateBitmap(
 			ctx,
-			FilterCountryBitmapPrefix+cc,
+			prefix+cc,
 			idx,
 			bit,
 		)

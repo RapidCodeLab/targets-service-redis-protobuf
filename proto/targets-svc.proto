@@ -4,6 +4,9 @@ option go_package = "/targets";
 
 message Request {
   string country_code = 1;
+  string browser = 2;
+  string platform = 3;
+  string device = 4;
 }
 
 message Response {
