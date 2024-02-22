@@ -11,7 +11,10 @@ import (
 
 func (s *Service) GetByTarget(
 	ctx context.Context,
-	countryCode string,
+	countryCode,
+	browser,
+	platform,
+	device string,
 ) ([]uint64, error) {
 	s.logger.Info("request handled",
 		"data",
@@ -28,7 +31,6 @@ func (s *Service) GetByTarget(
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("unmarshal bitmap: %s", err.Error()))
 	}
-
 	slog.Info("staus", "values", bitmap.ToArray())
 
 	// country bitmap
@@ -45,7 +47,23 @@ func (s *Service) GetByTarget(
 	}
 	slog.Info("country", "values", countryBitmap.ToArray())
 
+	// browser bitmap
+	browserData, err := s.storage.Get(
+		ctx,
+		FilterBrowserBitmapPrefix+browser)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("get from storage: %s", err.Error()))
+	}
+	browserBitmap := roaring64.NewBitmap()
+	err = countryBitmap.UnmarshalBinary(browserData)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("unmarshal bitmap: %s", err.Error()))
+	}
+	slog.Info("browser", "values", countryBitmap.ToArray())
+
+
 	bitmap.And(countryBitmap)
+	bitmap.And(browserBitmap)
 
 	return bitmap.ToArray(), nil
 }
