@@ -55,15 +55,45 @@ func (s *Service) GetByTarget(
 		return nil, errors.New(fmt.Sprintf("get from storage: %s", err.Error()))
 	}
 	browserBitmap := roaring64.NewBitmap()
-	err = countryBitmap.UnmarshalBinary(browserData)
+	err = browserBitmap.UnmarshalBinary(browserData)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("unmarshal bitmap: %s", err.Error()))
 	}
-	slog.Info("browser", "values", countryBitmap.ToArray())
+	slog.Info("browser", "values", browserBitmap.ToArray())
 
+	// browser bitmap
+	platformData, err := s.storage.Get(
+		ctx,
+		FilterPlatformBitmapPrefix+platform)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("get from storage: %s", err.Error()))
+	}
+	platformBitmap := roaring64.NewBitmap()
+	err = platformBitmap.UnmarshalBinary(platformData)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("unmarshal bitmap: %s", err.Error()))
+	}
+	slog.Info("platform", "values", platformBitmap.ToArray())
 
+	// device bitmap
+	deviceData, err := s.storage.Get(
+		ctx,
+		FilterDeviceBitmapPrefix+device)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("get from storage: %s", err.Error()))
+	}
+	deviceBitmap := roaring64.NewBitmap()
+	err = deviceBitmap.UnmarshalBinary(deviceData)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("unmarshal bitmap: %s", err.Error()))
+	}
+	slog.Info("device", "values", deviceBitmap.ToArray())
+
+	// AND bit ops
 	bitmap.And(countryBitmap)
 	bitmap.And(browserBitmap)
+	bitmap.And(platformBitmap)
+	bitmap.And(deviceBitmap)
 
 	return bitmap.ToArray(), nil
 }
