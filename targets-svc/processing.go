@@ -22,6 +22,9 @@ func (s *Service) Proccess(
 ) error {
 	s.logger.Info("recieved msg", "msg", msg)
 
+	filerExists := make(map[string]bool)
+	filerExists[FilterTargetCountry] = false
+
 	switch msg.Status {
 	case StatusEnabled:
 		err := s.UpdateBitmap(ctx, StatusBitmap, msg.IDx, addBit)
@@ -39,6 +42,7 @@ func (s *Service) Proccess(
 		s.logger.Warn("unrecognized operation", "value", msg.Status)
 	}
 
+	// set Filters
 	for _, filter := range msg.Filters {
 		slog.Info("filter to set", "data", filter)
 		switch filter.Target {
@@ -52,9 +56,23 @@ func (s *Service) Proccess(
 				s.logger.Error("set country bitmap", "error", err.Error())
 				// collect error
 			}
+			filerExists[FilterTargetCountry] = true
 		default:
 			slog.Warn("unrecognized filter target", "msg", filter.Target)
 			continue
+		}
+	}
+
+	// set if filter not exists
+	if !filerExists[FilterTargetCountry] {
+		err := s.SetCountryBitmap(
+			ctx,
+			msg.IDx,
+			"none",
+			[]string{})
+		if err != nil {
+			s.logger.Error("set country bitmap", "error", err.Error())
+			// collect error
 		}
 	}
 
@@ -76,9 +94,6 @@ func (s *Service) SetCountryBitmap(
 			bit = removeBit
 		}
 
-		if cc == "CN" || cc == "IT" {
-			s.logger.Info("v and cc", "idx", idx, "key", FilterCountryBitmapPrefix+cc, "bit", bit)
-		}
 		err := s.UpdateBitmap(
 			ctx,
 			FilterCountryBitmapPrefix+cc,
