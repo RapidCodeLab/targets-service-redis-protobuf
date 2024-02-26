@@ -178,16 +178,22 @@ func (s *Service) SetBitmap(
 ) error {
 	var err error
 
-	for _, cc := range list {
+	for _, item := range list {
 		bit := addBit
 
-		if contains(values, cc) && filter_type == FilterTypeDisallowed {
+		if contains(values, item) &&
+			filter_type == FilterTypeDisallowed {
+			bit = removeBit
+		}
+
+		if !contains(values, item) &&
+			filter_type == FilterTypeAllowed {
 			bit = removeBit
 		}
 
 		err := s.UpdateBitmap(
 			ctx,
-			prefix+cc,
+			prefix+item,
 			idx,
 			bit,
 		)
