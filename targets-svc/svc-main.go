@@ -49,21 +49,29 @@ type (
 func (s *Service) Get(
 	ctx context.Context,
 	req *targets.Request,
-) *targets.Response {
+) (*targets.Response, error) {
+	s.logger.Info("request handled",
+		"cc", req.GetCountryCode(),
+		"browser", req.GetBrowser(),
+		"platform", req.GetPlatform(),
+		"device", req.GetDevice())
 	res := &targets.Response{}
 
 	data, err := s.GetByTarget(
 		ctx,
 		req.GetCountryCode(),
+		req.GetBrowser(),
+		req.GetPlatform(),
+		req.GetDevice(),
 	)
 	if err != nil {
 		s.logger.Error("get by target", "error", err.Error())
-		return res
+		return res, err
 	}
 
 	res.Ids = data
 
-	return res
+	return res, nil
 }
 
 func New(

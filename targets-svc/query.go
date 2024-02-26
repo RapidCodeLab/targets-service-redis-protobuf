@@ -17,8 +17,10 @@ func (s *Service) GetByTarget(
 	device string,
 ) ([]uint64, error) {
 	s.logger.Info("request handled",
-		"data",
-		countryCode)
+		"cc", countryCode,
+		"browser", browser,
+		"platform", platform,
+		"device", device)
 
 	// status bitmap
 	data, err := s.storage.Get(ctx, StatusBitmap)
